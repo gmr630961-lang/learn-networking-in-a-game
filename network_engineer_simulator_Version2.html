@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Network Engineer Simulator</title>
+<style>
+  :root{color-scheme:dark;--bg:#060b14;--panel:#0d1523;--line:#25354b;--text:#e5edf7;--muted:#91a2ba;--cyan:#22d3ee;--green:#34d399;--orange:#fb923c}
+  *{box-sizing:border-box}
+  body{margin:0;height:100vh;overflow:hidden;background:var(--bg);color:var(--text);font:14px/1.45 system-ui, sans-serif}
+  button,input,select,textarea{font:inherit}
+  button{cursor:pointer;color:inherit}
+  header{height:64px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 16px;background:#0a111e;border-bottom:1px solid var(--line)}
+  h1{font-size:15px;letter-spacing:.08em;margin:0}
+  .subtitle{font-size:11px;color:var(--muted)}
+  .brand{display:flex;align-items:center;gap:12px}.brand-icon{font-size:24px;color:var(--cyan)}
+  .actions{display:flex;gap:8px}
+  .btn,.tab,.medium{border:1px solid var(--line);border-radius:8px;background:#111c2c;padding:8px 11px}
+  .btn:hover,.tab:hover,.medium:hover{border-color:var(--cyan)}
+  .primary{background:var(--cyan);color:#06202a;border-color:var(--cyan);font-weight:800}
+  .layout{display:flex;height:calc(100vh - 64px)}
+  aside{width:245px;flex:none;padding:13px;overflow:auto;background:var(--panel);border-right:1px solid var(--line)}
+  .label{margin:8px 0;color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+  .tools{display:grid;gap:7px;margin-bottom:16px}
+  .tool{width:100%;display:flex;align-items:center;gap:10px;text-align:left;padding:9px;border:1px solid var(--line);border-radius:9px;background:#0a1220}
+  .tool:hover{border-color:var(--cyan)}
+  .tool-icon{width:30px;text-align:center;font-size:20px}
+  .tool strong{display:block;font-size:12px}.tool small{font-size:10px;color:var(--muted)}
+  .hint{font-size:11px;color:var(--muted);padding:10px;border:1px solid var(--line);border-radius:9px;background:#09111d}
+  .canvas-wrap{position:relative;overflow:auto;flex:1}
+  #canvas{position:relative;width:2400px;height:1500px;background-color:#080e19;background-image:radial-gradient(#1c2a3c 1px,transparent 1px);background-size:24px 24px}
+  #cables{position:absolute;inset:0;width:2400px;height:1500px;overflow:visible;pointer-events:none;z-index:1}
+  .wire{fill:none;stroke-width:4;pointer-events:stroke;cursor:pointer}
+  .wire:hover{stroke-width:7;filter:drop-shadow(0 0 7px currentColor)}
+  .wire-hit{fill:none;stroke:transparent;stroke-width:18;pointer-events:stroke;cursor:pointer}
+  .device{position:absolute;z-index:2;width:218px;padding:11px;border:1px solid #2a3b54;border-radius:12px;background:linear-gradient(145deg,#121f31,#0b1320);box-shadow:0 12px 30px #0007;user-select:none;touch-action:none;cursor:grab}
+  .device:active{cursor:grabbing}.device:hover{border-color:#22d3ee99}
+  .device-head{display:flex;align-items:center;gap:9px}.device-icon{font-size:25px;width:34px;text-align:center}
+  .device-name{font-weight:800;font-size:12px;overflow-wrap:anywhere}.device-type{font-size:10px;color:var(--muted)}
+  .device-ip{font:10px ui-monospace,monospace;color:var(--cyan);margin-top:3px}
+  .ports{display:flex;flex-wrap:wrap;gap:6px;border-top:1px solid #25334a;margin-top:10px;padding-top:9px}
+  .port{touch-action:none;min-width:36px;padding:5px;border:1px solid #41516a;border-radius:6px;background:#09121f;color:#b6c4d7;font:9px ui-monospace,monospace}
+  .port:hover,.port.pending{border-color:var(--cyan);color:var(--cyan);background:#102b38}
+  .port.connected:before{content:"● ";color:var(--green)}
+  .port.wan-port{border-color:#a55025;color:#fdba74}
+  .delete{position:absolute;right:7px;top:5px;border:0;background:none;color:#8291a7;font-size:16px}
+  .delete:hover{color:#fb7185}
+  .status{position:fixed;bottom:10px;left:260px;z-index:3;padding:7px 10px;background:#09111de8;border:1px solid var(--line);border-radius:8px;color:var(--muted);font-size:11px;pointer-events:none}
+  .modal{display:none;position:fixed;inset:0;z-index:10;padding:3vh 3vw;background:#020617df}
+  .modal.open{display:flex}
+  .window{width:min(1150px,100%);height:100%;margin:auto;display:flex;flex-direction:column;overflow:hidden;border:1px solid #30415b;border-radius:14px;background:#0b1320;box-shadow:0 25px 90px #000b}
+  .window-head{min-height:58px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 15px;border-bottom:1px solid var(--line);background:#101b2b}
+  .host-controls{display:flex;align-items:center;gap:8px}
+  select,input,textarea{color:var(--text);background:#080f1b;border:1px solid #30415b;border-radius:7px;padding:8px}
+  .tabs{display:flex;gap:5px;padding:8px 14px 0;border-bottom:1px solid var(--line)}
+  .tab{border-color:transparent;border-radius:7px 7px 0 0;background:transparent;color:var(--muted)}
+  .tab.active{color:var(--cyan);border-color:var(--line);background:#0b1320}
+  .content{flex:1;min-height:0;overflow:auto;padding:14px}
+  .terminal{height:100%;min-height:300px;display:flex;flex-direction:column;padding:13px;border:1px solid #233148;border-radius:9px;background:#030811;font:12px/1.65 ui-monospace,monospace}
+  #output{flex:1;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+  .term-ok{color:#6ee7b7}.term-warn{color:#fbbf24}
+  .prompt{display:flex;gap:8px;align-items:center;border-top:1px solid #1e293b;padding-top:8px;color:var(--green)}
+  .prompt input{flex:1;border:0;background:transparent;outline:0;font:inherit}
+  .browser{min-height:360px;background:#f8fafc;color:#0f172a;border-radius:9px;overflow:hidden}
+  .browserbar{display:flex;gap:8px;padding:10px;background:#e2e8f0}
+  .browserbar input{flex:1;color:#0f172a;background:white}
+  .browserbar button{border:0;border-radius:6px;padding:7px 12px;color:#0f172a}
+  .browserbody{padding:18px}
+  .editor-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;min-height:500px}
+  .editor-pane,.preview-pane{display:flex;flex-direction:column;min-height:0}
+  .pane-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}
+  #html-editor{width:100%;flex:1;min-height:400px;resize:vertical;font:12px/1.5 ui-monospace,monospace;tab-size:2}
+  #html-preview{width:100%;flex:1;min-height:400px;border:1px solid #334155;border-radius:8px;background:white}
+  .small{font-size:11px;color:var(--muted)}
+  .guide-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+  .guide-card{padding:14px;border:1px solid var(--line);border-radius:10px;background:#0e1928}
+  .guide-card h3{margin:0 0 8px;color:var(--cyan);font-size:13px}.guide-card p{color:var(--muted);font-size:12px}
+  code{color:#86efac;font-family:ui-monospace,monospace}
+  @media(max-width:760px){header{padding:7px}.subtitle{display:none}aside{width:175px;padding:8px}.editor-grid{grid-template-columns:1fr}.host-controls{flex-wrap:wrap;justify-content:flex-end}.status{left:185px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><div class="brand-icon">⌘</div><div><h1>NETWORK ENGINEER SIMULATOR</h1><div class="subtitle">Build networks • Connect devices • Create and preview local HTML</div></div></div>
+  <div class="actions">
+    <button class="btn primary" onclick="openHost()">▣ Enable Host Screen</button>
+    <button class="btn" onclick="resetDemo()">↺ Reset Demo</button>
+    <button class="btn" onclick="clearNetwork()">Clear</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside>
+    <div class="label">Internet & WAN</div>
+    <div class="tools">
+      <button class="tool" onclick="spawn('internet')"><span class="tool-icon">🌐</span><span><strong>Internet</strong><small>WAN / Fiber source</small></span></button>
+      <button class="tool" onclick="spawn('tower')"><span class="tool-icon">📡</span><span><strong>Network Tower</strong><small>WAN uplink + LAN ports</small></span></button>
+    </div>
+    <div class="label">Servers</div>
+    <div class="tools">
+      <button class="tool" onclick="spawn('webserver')"><span class="tool-icon">🖥️</span><span><strong>Web Server</strong><small>HTTP service host</small></span></button>
+      <button class="tool" onclick="spawn('database')"><span class="tool-icon">🗄️</span><span><strong>Database Server</strong><small>Database node</small></span></button>
+      <button class="tool" onclick="spawn('rackserver')"><span class="tool-icon">▤</span><span><strong>Rack Server</strong><small>Multi-port server</small></span></button>
+    </div>
+    <div class="label">Network & Hosts</div>
+    <div class="tools">
+      <button class="tool" onclick="spawn('switch')"><span class="tool-icon">🔀</span><span><strong>Managed Switch</strong><small>8-port LAN switch</small></span></button>
+      <button class="tool" onclick="spawn('laptop')"><span class="tool-icon">💻</span><span><strong>Laptop Host</strong><small>Terminal + HTML workspace</small></span></button>
+      <button class="tool" onclick="spawn('pc')"><span class="tool-icon">🖥</span><span><strong>Desktop Host</strong><small>Terminal + HTML workspace</small></span></button>
+    </div>
+    <div class="label">Cable Medium</div>
+    <div class="tools">
+      <button class="tool" onclick="setMedium('wan')"><span class="tool-icon" style="color:#fb923c">〰</span><span><strong>WAN / Fiber</strong><small>WAN ports auto-select fiber</small></span></button>
+      <button class="tool" onclick="setMedium('ethernet')"><span class="tool-icon" style="color:#22d3ee">〰</span><span><strong>Ethernet / Cat6</strong><small>LAN connections</small></span></button>
+    </div>
+    <div class="hint"><b>Connect like automation tools:</b> Port se doosre port tak wire drag karo. Ya pehle port par click, phir destination port click. Cable par click karke disconnect karo.</div>
+  </aside>
+
+  <main class="canvas-wrap" id="canvas-wrap">
+    <div id="canvas"><svg id="cables" viewBox="0 0 2400 1500"></svg></div>
+  </main>
+</div>
+<div class="status" id="status">Ready — devices connect karke apna network banao.</div>
+
+<div class="modal" id="host-modal" role="dialog" aria-modal="true">
+  <section class="window">
+    <div class="window-head">
+      <div><b>💻 Host Screen</b><div class="subtitle">Selected host ka simulated desktop aur local HTML workspace</div></div>
+      <div class="host-controls"><label class="small" for="host-select">Active host:</label><select id="host-select" onchange="selectHost(this.value)"></select><button class="btn" onclick="closeHost()">✕ Close</button></div>
+    </div>
+    <nav class="tabs">
+      <button class="tab active" onclick="showTab('terminal',this)">Terminal</button>
+      <button class="tab" onclick="showTab('browser',this)">Browser</button>
+      <button class="tab" onclick="showTab('html',this)">HTML Lab</button>
+      <button class="tab" onclick="showTab('guide',this)">Guide</button>
+    </nav>
+    <div class="content">
+      <section id="tab-terminal">
+        <div class="terminal"><div id="output"></div><div class="prompt"><span id="prompt-label">host@sim:~$</span><input id="terminal-input" autocomplete="off" placeholder="help — Enter press karein"></div></div>
+      </section>
+      <section id="tab-browser" hidden>
+        <div class="browser">
+          <div class="browserbar"><input id="browser-url" value="http://192.168.1.10:8000"><button onclick="browse()">Go</button></div>
+          <div class="browserbody" id="browser-message"><h2>Simulator Browser</h2><p>Server ka IP aur port enter karo. Local HTML file ko HTML Lab se bhi preview kar sakte ho.</p></div>
+          <iframe id="browser-preview" title="Simulated web server page" sandbox="allow-scripts" style="display:none;width:100%;height:65vh;border:0;background:white"></iframe>
+        </div>
+      </section>
+      <section id="tab-html" hidden>
+        <div class="small" style="margin-bottom:10px">Apni HTML file import karo ya code edit karo. “Run local preview” se page isi screen ke isolated iframe mein chalega. “Save to host” ke baad simulated server par bhi serve kar sakte ho.</div>
+        <div class="editor-grid">
+          <div class="editor-pane">
+            <div class="pane-head"><b>HTML / CSS / JavaScript</b><div><label class="btn" for="html-file">Import .html</label><input id="html-file" type="file" accept=".html,.htm,text/html" hidden></div></div>
+            <textarea id="html-editor" spellcheck="false"></textarea>
+            <div class="pane-head" style="margin-top:8px"><span class="small">Preview sandbox: scripts isolated; external network access blocked.</span><div><button class="btn" onclick="runPreview()">▶ Run local preview</button><button class="btn primary" onclick="saveToHost()">Save to host</button></div></div>
+          </div>
+          <div class="preview-pane"><div class="pane-head"><b>Local Preview</b><button class="btn" onclick="runPreview()">↻ Refresh</button></div><iframe id="html-preview" title="Local HTML preview" sandbox="allow-scripts"></iframe></div>
+        </div>
+      </section>
+      <section id="tab-guide" hidden>
+        <div class="guide-grid">
+          <article class="guide-card"><h3>Automation-style wiring</h3><p>Port se port tak drag karein. WAN port ya Internet connection par WAN/Fiber medium automatically select hota hai. Cable par click karke remove kar sakte hain.</p></article>
+          <article class="guide-card"><h3>Simulated commands</h3><p><code>help</code>, <code>hostname</code>, <code>ip addr</code>, <code>ip route</code>, <code>ping IP</code>, <code>curl URL</code>, <code>python3 -m http.server 8000</code>, <code>clear</code></p></article>
+          <article class="guide-card"><h3>Serve your HTML</h3><p>HTML Lab mein code edit/import karke “Save to host” dabao. Host terminal mein <code>python3 -m http.server 8000</code> chalao. Browser mein us host ka IP:8000 kholo.</p></article>
+          <article class="guide-card"><h3>Safe learning sandbox</h3><p>HTML preview browser iframe ke sandbox mein run hota hai. Local file import browser ke file picker se hota hai. Simulator commands real machine par execute nahi hote.</p></article>
+        </div>
+      </section>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('canvas'), svg = document.getElementById('cables');
+  const S = { devices:[], cables:[], pending:null, drag:null, moved:false, medium:'ethernet', host:null };
+  let nextId = 1;
+  const specs = {
+    internet:{name:'Internet',icon:'🌐',ports:['WAN'],ip:'203.0.113.1'},
+    tower:{name:'Network Tower',icon:'📡',ports:['WAN','LAN1','LAN2','LAN3','LAN4'],ip:'192.168.1.1'},
+    switch:{name:'Managed Switch',icon:'🔀',ports:['P1','P2','P3','P4','P5','P6','P7','P8'],ip:'192.168.1.2'},
+    webserver:{name:'Web Server',icon:'🖥️',ports:['ETH0','ETH1'],ip:'192.168.1.10'},
+    database:{name:'Database Server',icon:'🗄️',ports:['ETH0','ETH1'],ip:'192.168.1.11'},
+    rackserver:{name:'Rack Server',icon:'▤',ports:['ETH0','ETH1','ETH2','ETH3'],ip:'192.168.1.12'},
+    laptop:{name:'Laptop Host',icon:'💻',ports:['ETH0'],ip:'192.168.1.20'},
+    pc:{name:'Desktop Host',icon:'🖥',ports:['ETH0'],ip:'192.168.1.21'}
+  };
+  const defaultHtml = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Local Web Page</title>
+  <style>
+    body { font: 16px system-ui; max-width: 700px; margin: 60px auto; padding: 20px; color: #172033; }
+    h1 { color: #0891b2; }
+    button { padding: 10px 16px; border: 0; border-radius: 8px; background: #0891b2; color: white; }
+  </style>
+</head>
+<body>
+  <h1>Hello, Network Engineer!</h1>
+  <p>Edit this HTML, then run your local preview.</p>
+  <button onclick="document.querySelector('p').textContent='JavaScript works in the preview!'">Test JavaScript</button>
+</body>
+</html>`;
+
+  const escapeHtml = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function setStatus(s){document.getElementById('status').textContent=s}
+  function setMedium(m){S.medium=m;setStatus('Cable medium: '+(m==='wan'?'WAN / Fiber':'Ethernet / Cat6'))}
+  window.setMedium=setMedium;
+
+  function spawn(type,x,y){
+    const s=specs[type], n=S.devices.length;
+    const d={id:'node-'+nextId++,type,name:s.name+' '+(n+1),ip:s.ip,gateway:'192.168.1.1',
+      x:x??70+(n%4)*270,y:y??80+Math.floor(n/4)*205,http:false,port:8000,html:defaultHtml};
+    S.devices.push(d);renderDevice(d);refreshHosts();setStatus(d.name+' added.');return d;
+  }
+  window.spawn=spawn;
+  function renderDevice(d){
+    let el=document.getElementById(d.id);
+    if(!el){el=document.createElement('div');el.id=d.id;el.className='device';canvas.appendChild(el)}
+    el.style.left=d.x+'px';el.style.top=d.y+'px';
+    const connected=new Set();
+    S.cables.forEach(c=>{if(c.a.id===d.id)connected.add(c.a.port);if(c.b.id===d.id)connected.add(c.b.port)});
+    el.innerHTML=`<button class="delete" title="Delete">×</button><div class="device-head"><span class="device-icon">${specs[d.type].icon}</span><div><div class="device-name">${escapeHtml(d.name)}</div><div class="device-type">${specs[d.type].name}</div><div class="device-ip">${escapeHtml(d.ip)}</div></div></div><div class="ports">${specs[d.type].ports.map((p,i)=>`<button class="port ${connected.has(i)?'connected':''} ${p==='WAN'?'wan-port':''} ${S.pending?.id===d.id&&S.pending.port===i?'pending':''}" data-port="${i}">${p}</button>`).join('')}</div>`;
+    el.querySelector('.delete').onclick=e=>{e.stopPropagation();removeDevice(d.id)};
+    el.querySelectorAll('.port').forEach(p=>p.addEventListener('click',e=>{e.stopPropagation();clickPort(d,Number(p.dataset.port))}));
+  }
+  function removeDevice(id){
+    S.devices=S.devices.filter(d=>d.id!==id);S.cables=S.cables.filter(c=>c.a.id!==id&&c.b.id!==id);
+    document.getElementById(id)?.remove();renderAll();refreshHosts();
+  }
+  function renderAll(){S.devices.forEach(renderDevice);renderCables()}
+  function portPoint(end){
+    const p=document.getElementById(end.id)?.querySelector(`[data-port="${end.port}"]`);
+    if(!p)return{x:0,y:0};
+    const cr=canvas.getBoundingClientRect(),r=p.getBoundingClientRect();
+    return{x:r.left+r.width/2-cr.left,y:r.top+r.height/2-cr.top};
+  }
+  function path(a,b){
+    const bend=Math.max(45,Math.abs(b.x-a.x)*.45);
+    return `M ${a.x} ${a.y} C ${a.x+bend} ${a.y}, ${b.x-bend} ${b.y}, ${b.x} ${b.y}`;
+  }
+  function renderCables(){
+    svg.innerHTML='';
+    S.cables.forEach(c=>{
+      const d=path(portPoint(c.a),portPoint(c.b)),g=document.createElementNS('http://www.w3.org/2000/svg','g');
+      const hit=document.createElementNS('http://www.w3.org/2000/svg','path');
+      hit.setAttribute('d',d);hit.setAttribute('class','wire-hit');
+      hit.onclick=()=>{S.cables=S.cables.filter(x=>x.id!==c.id);renderAll();setStatus('Cable disconnected.')};
+      const line=document.createElementNS('http://www.w3.org/2000/svg','path');
+      line.setAttribute('d',d);line.setAttribute('class','wire');line.setAttribute('stroke',c.medium==='wan'?'#fb923c':'#22d3ee');
+      line.style.color=c.medium==='wan'?'#fb923c':'#22d3ee';line.onclick=hit.onclick;g.append(hit,line);svg.appendChild(g);
+    });
+    if(S.drag){
+      const a=portPoint(S.drag.source),b=S.drag.current;
+      const line=document.createElementNS('http://www.w3.org/2000/svg','path');
+      line.setAttribute('d',path(a,b));line.setAttribute('class','wire');line.setAttribute('stroke','#a3e635');line.setAttribute('stroke-dasharray','7 5');svg.appendChild(line);
+    }
+  }
+  function autoMedium(a,b){
+    return a.type==='internet'||b.type==='internet'||specs[a.type].ports[S.drag?.source.port]==='WAN'||
+      specs[b.type].ports[S.drag?.target?.port]==='WAN'?'wan':S.medium;
+  }
+  function finishConnection(source,target){
+    if(!target||source.id===target.id&&source.port===target.port){S.pending=source;renderAll();return}
+    const a=S.devices.find(d=>d.id===source.id),b=S.devices.find(d=>d.id===target.id);
+    if(!a||!b)return;
+    const used=S.cables.some(c=>(c.a.id===source.id&&c.a.port===source.port)||(c.b.id===source.id&&c.b.port===source.port)||(c.a.id===target.id&&c.a.port===target.port)||(c.b.id===target.id&&c.b.port===target.port));
+    if(used){S.pending=null;renderAll();setStatus('Ek port par ek hi cable connect ho sakti hai.');return}
+    const wan= a.type==='internet'||b.type==='internet'||
+      specs[a.type].ports[source.port]==='WAN'||specs[b.type].ports[target.port]==='WAN';
+    S.cables.push({id:'cable-'+Math.random(),a:source,b:target,medium:wan?'wan':S.medium});
+    S.pending=null;renderAll();setStatus((wan?'WAN / Fiber':'Ethernet')+' connection ready.');
+  }
+  function clickPort(d,port){
+    if(S.suppressClick){S.suppressClick=false;return}
+    const point={x:d.x,y:d.y};
+    const end={id:d.id,port};
+    if(S.pending){const src=S.pending;S.pending=null;finishConnection(src,end)}
+    else {S.pending=end;const name=specs[d.type].ports[port];if(d.type==='internet'||name==='WAN')S.medium='wan';renderAll();setStatus('Port selected — next port click karein ya wire drag karein.')}
+  }
+
+  // Drag a cable from one port to another; click-to-connect remains available too.
+  canvas.addEventListener('pointerdown',e=>{
+    const port=e.target.closest('.port');if(!port||e.button!==0)return;
+    e.preventDefault();e.stopPropagation();
+    const card=port.closest('.device'),d=S.devices.find(x=>x.id===card.id),p=Number(port.dataset.port);
+    const start=S.pending||{id:d.id,port:p};
+    S.pending=null;S.drag={source:start,current:{x:d.x,y:d.y},pointerId:e.pointerId};
+    S.moved=false;port.setPointerCapture?.(e.pointerId);renderAll();
+  });
+  canvas.addEventListener('pointermove',e=>{
+    if(!S.drag)return;
+    const r=canvas.getBoundingClientRect();
+    S.drag.current={x:e.clientX-r.left,y:e.clientY-r.top};
+    if(Math.hypot(S.drag.current.x-portPoint(S.drag.source).x,S.drag.current.y-portPoint(S.drag.source).y)>8)S.moved=true;
+    renderCables();
+  });
+  canvas.addEventListener('pointerup',e=>{
+    if(!S.drag)return;
+    const targetEl=document.elementFromPoint(e.clientX,e.clientY)?.closest('.port');
+    const targetCard=targetEl?.closest('.device');
+    const target=targetEl&&targetCard?{id:targetCard.id,port:Number(targetEl.dataset.port)}:null;
+    const source=S.drag.source,wasDrag=S.moved;
+    S.drag=null;
+    if(target&&wasDrag){S.suppressClick=true;finishConnection(source,target);setTimeout(()=>S.suppressClick=false,50)}
+    else {S.pending=source;renderAll();setStatus('Port selected — destination port click karein, ya drag karke connect karein.')}
+  });
+  canvas.addEventListener('pointercancel',()=>{S.drag=null;renderCables()});
+
+  // Drag devices by their card background/header, not by their ports.
+  let moving=null;
+  canvas.addEventListener('pointerdown',e=>{
+    if(e.target.closest('.port,.delete'))return;
+    const card=e.target.closest('.device');if(!card||e.button!==0)return;
+    const d=S.devices.find(x=>x.id===card.id);if(!d)return;
+    const r=canvas.getBoundingClientRect();moving={d,dx:e.clientX-r.left-d.x,dy:e.clientY-r.top-d.y};
+    card.setPointerCapture?.(e.pointerId);
+  });
+  canvas.addEventListener('pointermove',e=>{
+    if(!moving)return;const r=canvas.getBoundingClientRect();
+    moving.d.x=Math.max(0,e.clientX-r.left-moving.dx);moving.d.y=Math.max(0,e.clientY-r.top-moving.dy);
+    renderDevice(moving.d);renderCables();
+  });
+  canvas.addEventListener('pointerup',()=>moving=null);
+
+  function isHost(d){return['laptop','pc','webserver','database','rackserver'].includes(d.type)}
+  function refreshHosts(){
+    const select=document.getElementById('host-select'),hosts=S.devices.filter(isHost);
+    if(!hosts.some(h=>h.id===S.host))S.host=hosts[0]?.id||null;
+    select.innerHTML=hosts.length?hosts.map(h=>`<option value="${h.id}">${escapeHtml(h.name)} — ${escapeHtml(h.ip)}</option>`).join(''):'<option value="">No hosts — canvas par host add karein</option>';
+    if(S.host)select.value=S.host;
+    updatePrompt();
+    if(document.getElementById('tab-html')&&!document.getElementById('tab-html').hidden)loadEditor();
+  }
+  function host(){return S.devices.find(d=>d.id===S.host)}
+  function updatePrompt(){const h=host();document.getElementById('prompt-label').textContent=h?h.name.toLowerCase().replace(/\s+/g,'-')+'@sim:~$':'no-host@sim:~$'}
+  window.selectHost=id=>{S.host=id;updatePrompt();loadEditor();log('Host selected: '+(host()?.name||'none'))}
+  window.openHost=()=>{document.getElementById('host-modal').classList.add('open');refreshHosts();loadEditor();if(!document.getElementById('output').children.length)log('Simulator ready. "help" se commands dekhein.','term-ok')}
+  window.closeHost=()=>document.getElementById('host-modal').classList.remove('open');
+  window.showTab=(name,button)=>{
+    ['terminal','browser','html','guide'].forEach(t=>document.getElementById('tab-'+t).hidden=t!==name);
+    document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t===button));
+    if(name==='html')loadEditor();
+  };
+  function log(text,cls=''){const el=document.createElement('div');el.className=cls;el.textContent=text;const out=document.getElementById('output');out.appendChild(el);out.scrollTop=out.scrollHeight}
+
+  function connected(a,b){
+    const seen=new Set([a]),q=[a];
+    while(q.length){const id=q.shift();if(id===b)return true;
+      S.cables.forEach(c=>{let n=c.a.id===id?c.b.id:c.b.id===id?c.a.id:null;if(n&&!seen.has(n)){seen.add(n);q.push(n)}})}
+    return false;
+  }
+  function runCommand(raw){
+    const cmd=raw.trim(),h=host();if(!cmd)return;
+    log((h?h.name.toLowerCase().replace(/\s+/g,'-'):'host')+'@sim:~$ '+cmd);
+    if(!h){log('Pehle canvas par host add karein.','term-warn');return}
+    const p=cmd.split(/\s+/),name=p[0].toLowerCase();
+    if(cmd==='help')log('Commands: help, hostname, ip addr, ip route, ping <ip>, curl <url>, python3 -m http.server [port], systemctl status, ls, uptime, clear','term-ok');
+    else if(cmd==='clear')document.getElementById('output').innerHTML='';
+    else if(cmd==='hostname')log(h.name.toLowerCase().replace(/\s+/g,'-'),'term-ok');
+    else if(['ip addr','ip a','ifconfig'].includes(cmd))log(`eth0: UP  inet ${h.ip}/24  gateway ${h.gateway}`,'term-ok');
+    else if(cmd==='ip route')log(`default via ${h.gateway} dev eth0`,'term-ok');
+    else if(name==='ping'){
+      const d=S.devices.find(x=>x.ip===p[1]);
+      log(d&&connected(h.id,d.id)?`PING ${p[1]}: simulated reply, network reachable.`:`PING ${p[1]||'?'}: destination unreachable.` ,d&&connected(h.id,d.id)?'term-ok':'term-warn');
+    }else if(name==='python3'&&p[1]==='-m'&&p[2]==='http.server'){
+      h.http=true;h.port=Number(p[3])||8000;log(`Simulated HTTP server running at http://${h.ip}:${h.port}/`,'term-ok');
+    }else if(name==='systemctl')log('Network: '+h.ip+' • HTTP service: '+(h.http?'active':'inactive'),h.http?'term-ok':'');
+    else if(name==='ls')log('Desktop/  Documents/  server-files/  index.html','term-ok');
+    else if(name==='uptime')log('up 1 hour, load average: 0.08, 0.05, 0.01','term-ok');
+    else if(name==='curl'){
+      const ip=(p[1]||'').replace(/^https?:\/\//,'').split(/[/:]/)[0],d=S.devices.find(x=>x.ip===ip);
+      log(d&&d.http&&connected(h.id,d.id)?`HTTP 200 OK — ${d.name} simulator response`:'Connection failed: server, address, or network unavailable.',d&&d.http&&connected(h.id,d.id)?'term-ok':'term-warn');
+    }else log(`"${cmd}" simulator mein available nahi. "help" type karein.`,'term-warn');
+  }
+  document.getElementById('terminal-input').addEventListener('keydown',e=>{if(e.key==='Enter'){runCommand(e.target.value);e.target.value=''}});
+
+  // Add a restrictive policy to user HTML and render it in a sandboxed iframe.
+  // Inline scripts/styles work; network requests and external resources are blocked.
+  function securedDocument(source){
+    const policy=`<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' data:; img-src data: blob:; font-src data:; media-src data: blob:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">`;
+    if(/<head[\s>]/i.test(source))return source.replace(/<head([^>]*)>/i,`<head$1>${policy}`);
+    if(/<html[\s>]/i.test(source))return source.replace(/<html([^>]*)>/i,`<html$1><head>${policy}</head>`);
+    return `<!doctype html><html><head>${policy}</head><body>${source}</body></html>`;
+  }
+  function loadEditor(){const h=host();if(h&&!document.getElementById('html-editor').dataset.hostId){document.getElementById('html-editor').value=h.html||defaultHtml;document.getElementById('html-editor').dataset.hostId=h.id}}
+  window.runPreview=()=>{document.getElementById('html-preview').srcdoc=securedDocument(document.getElementById('html-editor').value);};
+  window.saveToHost=()=>{const h=host();if(!h){log('Host select karein.','term-warn');return}h.html=document.getElementById('html-editor').value;document.getElementById('html-editor').dataset.hostId=h.id;runPreview();setStatus('HTML saved to '+h.name+'. Start simulated HTTP server to serve it on the network.')};
+  document.getElementById('host-select').addEventListener('change',()=>document.getElementById('html-editor').dataset.hostId='');
+  document.getElementById('html-file').addEventListener('change',async e=>{
+    const file=e.target.files?.[0];if(!file)return;
+    document.getElementById('html-editor').value=await file.text();
+    const h=host();if(h)document.getElementById('html-editor').dataset.hostId=h.id;
+    runPreview();setStatus('HTML file loaded into local preview: '+file.name);e.target.value='';
+  });
+  window.browse=()=>{
+    const h=host(),raw=document.getElementById('browser-url').value.trim(),match=raw.match(/(?:https?:\/\/)?([^/:]+)(?::(\d+))?/i);
+    const message=document.getElementById('browser-message'),frame=document.getElementById('browser-preview');
+    if(!match){message.textContent='Invalid address.';return}
+    const dest=S.devices.find(d=>d.ip===match[1]),port=Number(match[2])||80;
+    if(dest&&h&&dest.http&&port===dest.port&&connected(h.id,dest.id)){
+      message.style.display='none';frame.style.display='block';
+      frame.srcdoc=securedDocument(dest.html||defaultHtml);
+    }else{
+      frame.style.display='none';message.style.display='block';
+      message.innerHTML=`<h2>Site can't be reached</h2><p>Server host par HTML save karo, terminal mein <code>python3 -m http.server 8000</code> chalao, aur hosts ke beech cable connect karo.</p>`;
+    }
+  };
+  window.clearNetwork=()=>{S.devices=[];S.cables=[];S.pending=null;document.querySelectorAll('.device').forEach(x=>x.remove());renderCables();refreshHosts();setStatus('Canvas cleared.')};
+  window.resetDemo=()=>{
+    window.clearNetwork();nextId=1;
+    const i=spawn('internet',70,180),t=spawn('tower',370,180),s=spawn('switch',690,180),w=spawn('webserver',1010,95),l=spawn('laptop',1010,330);
+    S.cables.push(
+      {id:'demo1',a:{id:i.id,port:0},b:{id:t.id,port:0},medium:'wan'},
+      {id:'demo2',a:{id:t.id,port:1},b:{id:s.id,port:0},medium:'ethernet'},
+      {id:'demo3',a:{id:s.id,port:1},b:{id:w.id,port:0},medium:'ethernet'},
+      {id:'demo4',a:{id:s.id,port:2},b:{id:l.id,port:0},medium:'ethernet'}
+    );
+    renderAll();refreshHosts();setStatus('Demo ready: Internet → Tower → Switch → Web Server / Laptop.');
+  };
+  window.addEventListener('keydown',e=>{if(e.key==='Escape'){S.pending=null;renderAll();window.closeHost()}});
+  document.getElementById('host-modal').addEventListener('click',e=>{if(e.target.id==='host-modal')window.closeHost()});
+  window.resetDemo();
+})();
+</script>
+</body>
+</html>
+```**HTML Lab mein** file import/edit karke “Run local preview” dabao. Apne host ko network par dikhane ke liye HTML save karo, Terminal mein `python3 -m http.server 8000` chalao, phir Browser tab se us server ka IP:8000 kholo. Preview external network resources block karta hai, lekin inline HTML, CSS aur JavaScript run kar sakte hain.
