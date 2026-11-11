@@ -1,7 +1,7 @@
 # Network Engineer Simulator
 
 A browser-based educational game for learning network topology, device wiring, and basic web hosting in a simulated environment.
-
+URL - https://networking-game.netlify.app/
 ## Features
 
 - Add Internet, tower equipment, managed switches, web servers, database servers, rack servers, laptops, and desktop hosts
